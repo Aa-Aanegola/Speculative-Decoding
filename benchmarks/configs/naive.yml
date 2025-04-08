@@ -1,0 +1,4 @@
+type: naive
+target_model: google/gemma-2-9b-it
+generate_args:
+  max_new_tokens: 32

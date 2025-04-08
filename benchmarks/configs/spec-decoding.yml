@@ -1,0 +1,5 @@
+type: spec-decoding
+target_model: google/gemma-2-9b-it
+draft_model: google/gemma-2-2b-it
+generate_args:
+  max_new_tokens: 32

@@ -1,0 +1,7 @@
+type: fsd
+target_model: google/gemma-2-9b-it
+draft_model: google/gemma-2-2b-it
+generate_args:
+  fsd_div_threshold: 0.4
+  fsd_div_type: js_div
+  max_new_tokens: 32

@@ -40,8 +40,8 @@ from transformers.tokenization_utils import ExtensionsTrie
 from transformers.utils import (
     ModelOutput,
     is_accelerate_available,
-    is_hqq_available,
-    is_quanto_available,
+    # is_hqq_available,
+    # is_quanto_available,
     is_torchdynamo_compiling,
     logging,
 )
@@ -50,7 +50,7 @@ from transformers.generation.beam_search import BeamScorer, BeamSearchScorer, Co
 from transformers.generation.candidate_generator import (
     AssistedCandidateGenerator,
     # FuzzyAssistedCandidateGenerator,
-    BackoffCandidateGenerator,
+    # BackoffCandidateGenerator,
     CandidateGenerator,
     PromptLookupCandidateGenerator,
     _crop_past_key_values,
@@ -66,7 +66,7 @@ from transformers.generation.logits_process import (
     ExponentialDecayLengthPenalty,
     ForcedBOSTokenLogitsProcessor,
     ForcedEOSTokenLogitsProcessor,
-    ForceTokensLogitsProcessor,
+    # ForceTokensLogitsProcessor,
     HammingDiversityLogitsProcessor,
     InfNanRemoveLogitsProcessor,
     LogitNormalization,
@@ -684,7 +684,7 @@ class FuzzyGenerationMixin (GenerationMixin):
         tokenizer = kwargs.pop("tokenizer", None)  # Pull this out first, we only use it for stopping criteria
         generation_config, model_kwargs = self._prepare_generation_config(generation_config, **kwargs)
         self._validate_model_kwargs(model_kwargs.copy())
-        self._validate_assistant(assistant_model)
+        self._validate_assistant(assistant_model, tokenizer, tokenizer)
 
         # 2. Set generation parameters if not already defined
         if synced_gpus is None:
@@ -926,7 +926,7 @@ class FuzzyGenerationMixin (GenerationMixin):
         if generation_mode == GenerationMode.ASSISTED_GENERATION:
             
             # if not(hasattr(assistant_model, 'div_threshold')):
-            print(not(hasattr(assistant_model, 'div_threshold')))
+            # print(not(hasattr(assistant_model, 'div_threshold')))
             if fsd_div_threshold is None:
                 if generation_config.num_return_sequences > 1:
                     raise ValueError(
@@ -1708,7 +1708,7 @@ class FuzzyGenerationMixin (GenerationMixin):
             
             if len(candidate_generator.assistant_model.div_logit_processor) != 0:
                 next_token_logits = new_logits.clone()
-                print(f"processing div logits...")
+                # print(f"processing div logits...")
             else:
                 next_token_logits = new_logits_unprocessed
             
@@ -1730,13 +1730,13 @@ class FuzzyGenerationMixin (GenerationMixin):
                 for i in range(candidate_length + 1):
                     new_logits[:, i, :] = logits_warper(candidate_input_ids[:, : cur_len + i], new_logits[:, i, :])
                     if len(div_logits_processor) > 0:
-                        print(f"processing new logits...")
+                        # print(f"processing new logits...")
                         new_logits_unprocessed[:, i, :] = div_logits_processor(candidate_input_ids[:, : cur_len + i], new_logits_unprocessed[:, i, :])
                     if i < candidate_length:
                         # print(f"candidate_logits processing...")
                         candidate_logits[:, i, :] = logits_warper(candidate_input_ids[:, : cur_len + i], candidate_logits[:, i, :])
                         if len(div_logits_processor) > 0:
-                            print(f"processing candidate logits...")
+                            # print(f"processing candidate logits...")
                             candidate_logits_unprocessed[:, i, :] = div_logits_processor(candidate_input_ids[:, : cur_len + i], candidate_logits_unprocessed[:, i, :])
             
             logit_processing_time = time.time() - start_time
@@ -1968,7 +1968,7 @@ def _speculative_sampling(
             valid_tokens = torch.cat((new_candidate_input_ids[:, :n_matches], t), dim=-1)
         else:
             valid_tokens = t
-    print(f"SD: candidate_length: {candidate_length}, n_matches: {n_matches}")# , cur_len: {cur_len}")
+    # print(f"SD: candidate_length: {candidate_length}, n_matches: {n_matches}")# , cur_len: {cur_len}")
     
     spec_sampling_time = time.time() - start_time
     return valid_tokens, n_matches, correction_term, is_accepted, acceptance_time, spec_sampling_time
@@ -2095,12 +2095,12 @@ def _speculative_backoff_sampling(
             if div_type == 'top_k_tv_div':
                 divs = 0.5 * torch.abs(p_top_k - q_top_k).sum(dim=-1)
             
-            print(f"divs: {divs}")
+            # print(f"divs: {divs}")
             
         is_accepted = divs <= div_threshold
         
         
-        print(f"divs: {divs.tolist()} threshold: {div_threshold} div_type: {div_type}")
+        # print(f"divs: {divs.tolist()} threshold: {div_threshold} div_type: {div_type}")
         
     else: # this is case of regular SD 
         q = candidate_logits_unprocessed.softmax(dim=-1) # depends on whether processing candidate_logits or not
@@ -2160,7 +2160,7 @@ def _speculative_backoff_sampling(
             else:
                 valid_tokens = t
     
-    print(f"SBD: candidate_length: {candidate_length}, n_matches: {n_matches}")
+    # print(f"SBD: candidate_length: {candidate_length}, n_matches: {n_matches}")
     spec_sampling_time = time.time() - start_time
     total_time = time.time() - initial_start_time
     return valid_tokens, n_matches, new_logits, correction_term, true_divs, acceptance_time, spec_sampling_time
@@ -2235,7 +2235,7 @@ class FSDAutoModelForCausalLM:
         if fsd_model_class is None:
             raise ValueError(f"Unsupported model class {model_class_name}")
 
-        print(f"Loading model: {fsd_model_class.__name__}")  # Debugging
+        # print(f"Loading model: {fsd_model_class.__name__}")  # Debugging
 
         # Load and return the model
         return fsd_model_class.from_pretrained(model_name_or_path, *args, **kwargs)
