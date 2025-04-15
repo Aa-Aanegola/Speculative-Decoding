@@ -39,7 +39,7 @@ def save_profile(model, tokenizer, generate_args: Dict, prompt_list: List[str], 
     decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
     key_averages = prof.key_averages()
-    total_cuda_time_ms = sum([getattr(item, 'cuda_time', 0) for item in key_averages]) / 1e3
+    total_cuda_time_ms = sum([getattr(item, 'device_time', 0) for item in key_averages]) / 1e3
     total_cpu_time_ms = sum([getattr(item, 'cpu_time', 0) for item in key_averages]) / 1e3
     max_gpu_mem = torch.cuda.max_memory_allocated() / 1e6
 
@@ -54,14 +54,6 @@ def save_profile(model, tokenizer, generate_args: Dict, prompt_list: List[str], 
         "max_gpu_memory_MB": max_gpu_mem,
         "gpu_mem_per_token_MB": max_gpu_mem / num_tokens,
     })
-
-
-    stats = prof.key_averages().table(sort_by="cuda_time", row_limit=10)
-    for row in stats:
-        wandb_run.log({
-            f"{row.key}_cuda_time_per_token_ms": (row.self_cuda_time_total / 1e3) / num_tokens,
-            f"{row.key}_cpu_time_per_token_ms": (row.self_cpu_time_total / 1e3) / num_tokens,
-        })
 
     op_table = wandb.Table(columns=["Op", "CUDA Time/token (ms)", "CPU Time/token (ms)"])
     for row in prof.key_averages():
@@ -81,9 +73,15 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='PyTorch Profiler')
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
+    parser.add_argument('--wandb', action='store_true', help='use wandb for logging')
     args = parser.parse_args()
     with open(f'{args.yaml}', 'r') as f:
         config = yaml.safe_load(f)
+
+    if args.wandb:
+        os.environ["WANDB_DISABLED"] = "false"
+    else:
+        os.environ["WANDB_DISABLED"] = "true"
     
     run = wandb.init(
         entity="speculative-decoding",
