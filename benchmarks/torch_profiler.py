@@ -59,7 +59,7 @@ def save_profile(model, tokenizer, generate_args: Dict, prompt_list: List[str], 
     for row in prof.key_averages():
         op_table.add_data(
             row.key,
-            (row.cuda_time / 1e3) / num_tokens,
+            (row.device_time / 1e3) / num_tokens,
             (row.cpu_time / 1e3) / num_tokens,
         )
     wandb_run.log({"profiler_summary": op_table})
