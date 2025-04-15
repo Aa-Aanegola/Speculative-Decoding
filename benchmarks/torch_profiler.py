@@ -8,6 +8,8 @@ import os
 from tqdm import tqdm
 import wandb
 from datetime import datetime
+import sys
+sys.path.append('../../UmbreLLa')
 
 
 # wrapper function to save pytorch profiler data

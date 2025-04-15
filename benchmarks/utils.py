@@ -4,7 +4,9 @@ sys.path.append('..')
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from fsd import FSDAutoModelForCausalLM
 import torch
-
+sys.path.append('../../UmbreLLa')
+from umbrella.engine.auto_engine import AutoEngine
+import json
 logdir_base = 'logdir'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -38,3 +40,13 @@ def load_model(config):
         target_model.eval()
         
         return target_model, tokenizer, {}
+    
+    elif config["type"] == "umbrella":
+        with open(config["json"]) as f:
+            json_data = json.load(f)
+        target_model = AutoEngine.from_config(device=device, **json_data)
+        
+        return target_model, target_model.tokenizer, {}
+    
+    else:
+        raise ValueError(f"Unknown model type: {config['type']}")
