@@ -23,7 +23,7 @@ def log_to_wandb(entry_result, question_id, turn_index, category):
     })
 
 @torch.no_grad()
-def profile_single_turn(model, tokenizer, prompt: str, max_new_tokens=50):
+def profile_single_turn(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
     torch.cuda.synchronize()
@@ -33,8 +33,7 @@ def profile_single_turn(model, tokenizer, prompt: str, max_new_tokens=50):
 
     output = model.generate(
         **inputs,
-        max_new_tokens=max_new_tokens,
-        use_cache=True,
+        **generate_args
     )
 
     torch.cuda.synchronize()
@@ -52,14 +51,14 @@ def profile_single_turn(model, tokenizer, prompt: str, max_new_tokens=50):
     }
 
 
-def profile_dataset(model, tokenizer, dataset: List[Dict], max_new_tokens=50):
+def profile_dataset(model, tokenizer, generate_args, dataset: List[Dict], max_new_tokens=50):
     results = []
 
     for entry in dataset:
         qid = entry["question_id"]
         category = entry.get("category", "unknown")
         for i, turn in enumerate(entry["turns"]):
-            result = profile_single_turn(model, tokenizer, turn, max_new_tokens=max_new_tokens)
+            result = profile_single_turn(model, tokenizer, generate_args, turn, max_new_tokens=max_new_tokens)
 
             results.append(result)
 
@@ -104,7 +103,7 @@ if __name__ == "__main__":
         "num_layers": len(list(model.children()))
     })
     
-    res = profile_dataset(model, tokenizer, dset, max_new_tokens=generate_args["max_new_tokens"])
+    res = profile_dataset(model, tokenizer, generate_args, dset, max_new_tokens=generate_args["max_new_tokens"])
     with open(f'/insomnia001/depts/edu/COMSE6998/{UNI}/results_{config["type"]}.json', 'w') as f:
         json.dump(res, f, indent=4)
     wandb.finish()
