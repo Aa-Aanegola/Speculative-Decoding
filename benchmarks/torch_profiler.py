@@ -8,13 +8,13 @@ import os
 from tqdm import tqdm
 import wandb
 from datetime import datetime
-import sys
-sys.path.append('../../UmbreLLa')
+os.environ["HF_HOME"] = f"/insomnia001/depts/edu/COMSE6998/{UNI}/.cache/huggingface"
+os.environ["WANDB_DIR"] = f"/insomnia001/depts/edu/COMSE6998/{UNI}/speculative-decoding/benchmarks/"
 
 
 # wrapper function to save pytorch profiler data
 def save_profile(model, tokenizer, generate_args: Dict, prompt_list: List[str], log_dir: str, wandb_run):    
-    log_dir = f'{logdir_base}/{log_dir}/'
+    log_dir = f'/insomnia001/depts/edu/COMSE6998/{UNI}/{logdir_base}/{log_dir}/'
     os.makedirs(log_dir, exist_ok=True)
 
     # Warm-up runs
