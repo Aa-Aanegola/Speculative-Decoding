@@ -1,3 +1,7 @@
 type: medusa
 target_model: FasterDecoding/medusa-vicuna-7b-v1.3
 generate_args:
+  max_steps: 100
+  temperature: 0.7
+  posterior_threshold: 0.09
+  posterior_alpha: 0.3
