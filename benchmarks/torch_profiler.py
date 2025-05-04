@@ -8,14 +8,36 @@ import os
 from tqdm import tqdm
 import wandb
 from datetime import datetime
-os.environ["HF_HOME"] = f"/insomnia001/depts/edu/COMSE6998/{UNI}/.cache/huggingface"
-os.environ["WANDB_DIR"] = f"/insomnia001/depts/edu/COMSE6998/{UNI}/speculative-decoding/benchmarks/"
+import sys
+import logging
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+sys.path.append('../../UmbreLLa')
 
 # wrapper function to save pytorch profiler data
 def save_profile(model, tokenizer, generate_args: Dict, prompt_list: List[str], log_dir: str, wandb_run):    
-    log_dir = f'/insomnia001/depts/edu/COMSE6998/{UNI}/{logdir_base}/{log_dir}/'
-    os.makedirs(log_dir, exist_ok=True)
+    # Use absolute path
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    full_log_dir = os.path.join(base_dir, logdir_base, log_dir)
+    logger.info(f"Using log directory: {full_log_dir}")
+    
+    # Ensure the directory exists and is empty
+    os.makedirs(full_log_dir, exist_ok=True)
+    logger.info(f"Created directory: {full_log_dir}")
+    
+    # Clean any existing files
+    for f in os.listdir(full_log_dir):
+        file_path = os.path.join(full_log_dir, f)
+        try:
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                os.rmdir(file_path)
+        except Exception as e:
+            logger.error(f"Error cleaning directory: {e}")
 
     # Warm-up runs
     for i in range(3):
@@ -26,46 +48,57 @@ def save_profile(model, tokenizer, generate_args: Dict, prompt_list: List[str], 
     prompt = prompt_list[3]
     inputs = tokenizer(prompt, return_tensors='pt').to(device)
 
-    with profile(
-        activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-        with_stack=True,
-        record_shapes=True,
-        with_flops=True,
-        profile_memory=True,
-        on_trace_ready=tensorboard_trace_handler(log_dir)
-    ) as prof:
-        with record_function("model_generate"):
-            outputs = model.generate(**inputs, **generate_args)
+    # Create a unique subdirectory for this profiling run
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    profile_dir = os.path.join(full_log_dir, f"run_{timestamp}")
+    os.makedirs(profile_dir, exist_ok=True)
+    logger.info(f"Created profile directory: {profile_dir}")
 
-    num_tokens = outputs.shape[-1]
-    decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
+    try:
+        with profile(
+            activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+            record_shapes=False,
+            profile_memory=True,
+            on_trace_ready=tensorboard_trace_handler(profile_dir)
+        ) as prof:
+            with record_function("model_generate"):
+                outputs = model.generate(**inputs, **generate_args)
+    except Exception as e:
+        logger.error(f"Error during profiling: {e}")
+        raise
 
-    key_averages = prof.key_averages()
-    total_cuda_time_ms = sum([getattr(item, 'device_time', 0) for item in key_averages]) / 1e3
-    total_cpu_time_ms = sum([getattr(item, 'cpu_time', 0) for item in key_averages]) / 1e3
-    max_gpu_mem = torch.cuda.max_memory_allocated() / 1e6
+    try:
+        num_tokens = outputs.shape[-1]
+        decoded_outputs = tokenizer.batch_decode(outputs, skip_special_tokens=True)
 
-    num_tokens = outputs.shape[-1]
+        key_averages = prof.key_averages()
+        total_cuda_time_ms = sum([getattr(item, 'device_time', 0) for item in key_averages]) / 1e3
+        total_cpu_time_ms = sum([getattr(item, 'cpu_time', 0) for item in key_averages]) / 1e3
+        max_gpu_mem = torch.cuda.max_memory_allocated() / 1e6
 
-    wandb_run.log({
-        "tokens_generated": num_tokens,
-        "total_cpu_time_ms": total_cpu_time_ms,
-        "cpu_time_per_token_ms": total_cpu_time_ms / num_tokens,
-        "total_cuda_time_ms": total_cuda_time_ms,
-        "cuda_time_per_token_ms": total_cuda_time_ms / num_tokens,
-        "max_gpu_memory_MB": max_gpu_mem,
-        "gpu_mem_per_token_MB": max_gpu_mem / num_tokens,
-    })
+        wandb_run.log({
+            "tokens_generated": num_tokens,
+            "total_cpu_time_ms": total_cpu_time_ms,
+            "cpu_time_per_token_ms": total_cpu_time_ms / num_tokens,
+            "total_cuda_time_ms": total_cuda_time_ms,
+            "cuda_time_per_token_ms": total_cuda_time_ms / num_tokens,
+            "max_gpu_memory_MB": max_gpu_mem,
+            "gpu_mem_per_token_MB": max_gpu_mem / num_tokens,
+        })
 
-    op_table = wandb.Table(columns=["Op", "CUDA Time/token (ms)", "CPU Time/token (ms)"])
-    for row in prof.key_averages():
-        op_table.add_data(
-            row.key,
-            (row.device_time / 1e3) / num_tokens,
-            (row.cpu_time / 1e3) / num_tokens,
-        )
-    wandb_run.log({"profiler_summary": op_table})
-    wandb_run.log({"tensorboard_trace_path": log_dir})
+        op_table = wandb.Table(columns=["Op", "CUDA Time/token (ms)", "CPU Time/token (ms)"])
+        for row in prof.key_averages():
+            op_table.add_data(
+                row.key,
+                (row.device_time / 1e3) / num_tokens,
+                (row.cpu_time / 1e3) / num_tokens,
+            )
+        wandb_run.log({"profiler_summary": op_table})
+        wandb_run.log({"tensorboard_trace_path": profile_dir})
+        logger.info("Successfully completed profiling and logging")
+    except Exception as e:
+        logger.error(f"Error processing profiling results: {e}")
+        raise
 
 
 
