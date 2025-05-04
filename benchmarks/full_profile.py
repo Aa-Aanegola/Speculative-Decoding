@@ -8,9 +8,17 @@ import wandb
 from datetime import datetime
 import os
 from time import perf_counter as now
-os.environ["HF_HOME"] = f"/insomnia001/depts/edu/COMSE6998/{UNI}/.cache/huggingface"
-os.environ["WANDB_DIR"] = f"/insomnia001/depts/edu/COMSE6998/{UNI}/speculative-decoding/benchmarks/"
-os.environ["WANDB_CACHE_DIR"] = f"/insomnia001/depts/edu/COMSE6998/{UNI}/.cache/wandb"
+
+# Use scratch directory for cache and output
+SCRATCH_DIR = "/insomnia001/home/nb3227/scratch/nb3227"
+os.environ["HF_HOME"] = os.path.join(SCRATCH_DIR, ".cache/huggingface")
+os.environ["WANDB_DIR"] = os.path.join(SCRATCH_DIR, "wandb")
+os.environ["WANDB_CACHE_DIR"] = os.path.join(SCRATCH_DIR, ".cache/wandb")
+
+# Create directories if they don't exist
+os.makedirs(os.environ["HF_HOME"], exist_ok=True)
+os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
+os.makedirs(os.environ["WANDB_CACHE_DIR"], exist_ok=True)
 
 def log_to_wandb(entry_result, question_id, turn_index, category):
     wandb.log({
@@ -74,7 +82,9 @@ if __name__ == "__main__":
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
     parser.add_argument('--dataset', type=str, required=True, help='dataset to profile')
     parser.add_argument('--wandb', action='store_true', help='use wandb for logging')
+    parser.add_argument('--output-dir', type=str, default=SCRATCH_DIR, help='directory to save results')
     args = parser.parse_args()
+    
     with open(f'{args.yaml}', 'r') as f:
         config = yaml.safe_load(f)
 
@@ -92,9 +102,8 @@ if __name__ == "__main__":
         name=config["type"]+ '_'+datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
     )
     
-    
-    model, tokenizer, args = load_model(config)
-    generate_args = {**args, **config["generate_args"]}
+    model, tokenizer, model_args = load_model(config)
+    generate_args = {**model_args, **config["generate_args"]}
     
     # Log model statistics
     wandb.log({
@@ -104,7 +113,9 @@ if __name__ == "__main__":
     })
     
     res = profile_dataset(model, tokenizer, generate_args, dset, max_new_tokens=generate_args["max_new_tokens"])
-    with open(f'/insomnia001/depts/edu/COMSE6998/{UNI}/results_{config["type"]}.json', 'w') as f:
+    results_file = os.path.join(args.output_dir, f'results_{config["type"]}.json')
+    os.makedirs(os.path.dirname(results_file), exist_ok=True)
+    with open(results_file, 'w') as f:
         json.dump(res, f, indent=4)
     wandb.finish()
-    print("Profiling complete.")
+    print(f"Profiling complete. Results saved to {results_file}")
