@@ -9,16 +9,17 @@ from datetime import datetime
 import os
 from time import perf_counter as now
 
-# Use scratch directory for cache and output
-SCRATCH_DIR = "/insomnia001/home/nb3227/scratch/nb3227"
-os.environ["HF_HOME"] = os.path.join(SCRATCH_DIR, ".cache/huggingface")
-os.environ["WANDB_DIR"] = os.path.join(SCRATCH_DIR, "wandb")
-os.environ["WANDB_CACHE_DIR"] = os.path.join(SCRATCH_DIR, ".cache/wandb")
+# # Use scratch directory for cache and output
+SCRATCH_DIR = "/insomnia001/depts/edu/COMSE6998/aa5506/scratch"
+# os.environ["HF_HOME"] = os.path.join(SCRATCH_DIR, ".cache/huggingface")
+# os.environ["WANDB_DIR"] = os.path.join(SCRATCH_DIR, "wandb")
+# os.environ["WANDB_CACHE_DIR"] = os.path.join(SCRATCH_DIR, ".cache/wandb")
 
-# Create directories if they don't exist
-os.makedirs(os.environ["HF_HOME"], exist_ok=True)
-os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
-os.makedirs(os.environ["WANDB_CACHE_DIR"], exist_ok=True)
+# # Create directories if they don't exist
+os.makedirs(SCRATCH_DIR, exist_ok=True)
+# os.makedirs(os.environ["HF_HOME"], exist_ok=True)
+# os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
+# os.makedirs(os.environ["WANDB_CACHE_DIR"], exist_ok=True)
 
 def log_to_wandb(entry_result, question_id, turn_index, category):
     wandb.log({
@@ -65,10 +66,14 @@ def profile_dataset(model, tokenizer, generate_args, dataset: List[Dict], max_ne
     for entry in dataset:
         qid = entry["question_id"]
         category = entry.get("category", "unknown")
+        
         for i, turn in enumerate(entry["turns"]):
             result = profile_single_turn(model, tokenizer, generate_args, turn, max_new_tokens=max_new_tokens)
 
-            results.append(result)
+            results.append({
+                **result,
+                **entry
+            })
 
             print(f"[{qid} - Turn {i}] {len(result['tokens'])} tokens, {result['total_time']:.3f}s total, {result['tokens_per_second']:.2f} tok/s")
             log_to_wandb(result, qid, i, category)

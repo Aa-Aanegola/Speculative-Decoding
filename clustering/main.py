@@ -6,6 +6,8 @@ import os
 import json
 import joblib
 
+BATCH_SIZE = 32
+
 def load_data(file_path):
     """
     Load data from a JSONL file.
@@ -18,9 +20,13 @@ def load_data(file_path):
 
 model = SentenceTransformer('all-MiniLM-L6-v2')
 def encode_sentences(sentences):
-    embeddings = model.encode(sentences, convert_to_tensor=True)
-    return embeddings.cpu().numpy()
-
+    embeddings = []
+    for i in range(0, len(sentences), BATCH_SIZE):
+        batch = sentences[i:i + BATCH_SIZE]
+        batch_embeddings = model.encode(batch)
+        embeddings.extend(batch_embeddings)
+    return embeddings
+    
 def cluster_embeddings(embeddings, n_clusters, save=False, save_path=None):
     kmeans = KMeans(n_clusters=n_clusters, random_state=0)
     kmeans.fit(embeddings)
@@ -32,6 +38,16 @@ def cluster_embeddings(embeddings, n_clusters, save=False, save_path=None):
     
     return kmeans
 
+def add_embeddings_to_dset(data, kmeans):
+    batch_size = 32
+    
+    embeddings = encode_sentences([''.join(item['turns']) for item in data])
+    labels = kmeans.predict(embeddings)
+    
+    for i, item in enumerate(data):
+        item['cluster'] = int(labels[i])
+        item['embedding'] = embeddings[i].tolist()
+    return data
 
 if __name__ == "__main__":
     data = load_data('/insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/benchmarks/data/question.jsonl')
@@ -39,8 +55,13 @@ if __name__ == "__main__":
     sentences = [''.join(item['turns']) for item in data]    
     embeddings = encode_sentences(sentences)
     
-    n_clusters = 5 
-    kmeans = cluster_embeddings(embeddings, n_clusters, save=True, save_path='kmeans_model.pkl')
+    n_clusters = 5
+    kmeans = cluster_embeddings(embeddings, n_clusters, save=True, save_path='kmeans_model.job')
     
     print("Cluster centers:")
     print(kmeans.cluster_centers_)
+    
+    data_with_clusters = add_embeddings_to_dset(data, kmeans)
+    with open('data_with_clusters.jsonl', 'w') as f:
+        for item in data_with_clusters:
+            f.write(json.dumps(item) + '\n')

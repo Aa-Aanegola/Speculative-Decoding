@@ -7,7 +7,7 @@ import torch
 sys.path.append('../../UmbreLLa')
 # from umbrella.engine.auto_engine import AutoEngine
 sys.path.append('../../')
-from Medusa.medusa.model.medusa_model import MedusaModelLlama, MedusaConfig
+# from Medusa.medusa.model.medusa_model import MedusaModelLlama, MedusaConfig
 
 import json
 logdir_base = 'logdir'
@@ -164,20 +164,26 @@ def load_model(config):
         
     #     return target_model, target_model.tokenizer, {}
 
-    elif config["type"] == "medusa":
-        target_model = MedusaModelLlama.from_pretrained(config["target_model"], torch_dtype=torch.bfloat16, device_map="auto")
-        target_tokenizer = target_model.get_tokenizer()
-        target_model.eval()
+    # elif config["type"] == "medusa":
+    #     target_model = MedusaModelLlama.from_pretrained(config["target_model"], torch_dtype=torch.bfloat16, device_map="auto")
+    #     target_tokenizer = target_model.get_tokenizer()
+    #     target_model.eval()
         
-        # Create a wrapper that returns a tensor instead of a generator
-        original_generate = target_model.medusa_generate
-        def wrapped_generate(**kwargs):
-            outputs = list(original_generate(**kwargs))
-            final_text = outputs[-1]["text"]
-            return target_tokenizer(final_text, return_tensors='pt').input_ids.to(device)
+    #     # Create a wrapper that returns a tensor instead of a generator
+    #     original_generate = target_model.medusa_generate
+    #     def wrapped_generate(**kwargs):
+    #         outputs = list(original_generate(**kwargs))
+    #         final_text = outputs[-1]["text"]
+    #         return target_tokenizer(final_text, return_tensors='pt').input_ids.to(device)
             
-        target_model.generate = wrapped_generate
+    #     target_model.generate = wrapped_generate
         
+    #     return target_model, target_tokenizer, {}
+    
+    elif config["type"] == "medusa-gemma":
+        target_model = AutoModelForCausalLM.from_pretrained(config["target_model"], torch_dtype=torch.bfloat16, device_map="auto")
+        target_tokenizer = AutoTokenizer.from_pretrained(config["target_model"])
+        target_model.eval()
         return target_model, target_tokenizer, {}
     
     else:
