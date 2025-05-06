@@ -115,7 +115,7 @@ if __name__ == "__main__":
     })
     
     res = profile_dataset(model, tokenizer, generate_args, dset, max_new_tokens=generate_args["max_new_tokens"])
-    results_file = os.path.join(args.output_dir, f'results_{config["type"]}_smol.json')
+    results_file = os.path.join(args.output_dir, f'results_{config["type"]}.json')
     os.makedirs(os.path.dirname(results_file), exist_ok=True)
     with open(results_file, 'w') as f:
         json.dump(res, f, indent=4)
