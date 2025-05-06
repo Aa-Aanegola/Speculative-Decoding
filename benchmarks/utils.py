@@ -1,7 +1,7 @@
 import yaml
 import sys
 sys.path.append('..')
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModel
 from fsd import FSDAutoModelForCausalLM
 import torch
 sys.path.append('../../UmbreLLa')
@@ -133,7 +133,8 @@ def load_model(config):
         
     
         return target_model, target_tokenizer, {
-            'assistant_model': draft_model
+            'assistant_model': draft_model,
+            'pad_token_id': target_tokenizer.eos_token_id
         }
     elif config["type"] == "fsd":
         target_model = FSDAutoModelForCausalLM.from_pretrained(config["target_model"], torch_dtype=torch.bfloat16, device_map="auto")
@@ -144,14 +145,25 @@ def load_model(config):
         
         
         return target_model, tokenizer, {
-            'assistant_model': draft_model
+            'assistant_model': draft_model,
+            'pad_token_id': tokenizer.eos_token_id
         }
     elif config["type"] == "naive":
         target_model = AutoModelForCausalLM.from_pretrained(config["target_model"], torch_dtype=torch.bfloat16, device_map="auto")
         tokenizer = AutoTokenizer.from_pretrained(config["target_model"])
         target_model.eval()
         
-        return target_model, tokenizer, {}
+        return target_model, tokenizer, {
+            'pad_token_id': tokenizer.eos_token_id
+        }
+    elif config['type'] == 'medusa-hf':
+        tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.1-8b-Instruct")
+        model = AutoModelForCausalLM.from_pretrained("Nexesenex/Llama_3.1_8b_Medusa_v1.01")
+        target_model.eval()
+        
+        return model, tokenizer, {
+            'pad_token_id': tokenizer.eos_token_id
+        }
     
     # elif config["type"] == "umbrella":
     #     with open(config["json"]) as f:
@@ -181,7 +193,7 @@ def load_model(config):
     #     return target_model, target_tokenizer, {}
     
     elif config["type"] == "medusa-gemma":
-        target_model = AutoModelForCausalLM.from_pretrained(config["target_model"], torch_dtype=torch.bfloat16, device_map="auto")
+        target_model = AutoModel.from_pretrained(config["target_model"])
         target_tokenizer = AutoTokenizer.from_pretrained(config["target_model"])
         target_model.eval()
         return target_model, target_tokenizer, {}

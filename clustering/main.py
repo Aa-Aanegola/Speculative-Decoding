@@ -9,9 +9,6 @@ import joblib
 BATCH_SIZE = 32
 
 def load_data(file_path):
-    """
-    Load data from a JSONL file.
-    """
     data = []
     with open(file_path, 'r') as f:
         for line in f:
@@ -46,22 +43,22 @@ def add_embeddings_to_dset(data, kmeans):
     
     for i, item in enumerate(data):
         item['cluster'] = int(labels[i])
-        item['embedding'] = embeddings[i].tolist()
+        # item['embedding'] = embeddings[i].tolist()
     return data
 
 if __name__ == "__main__":
-    data = load_data('/insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/benchmarks/data/question.jsonl')
+    data = load_data('/insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/benchmarks/data/ultrachat_30000_prompts.jsonl')
     
     sentences = [''.join(item['turns']) for item in data]    
     embeddings = encode_sentences(sentences)
     
-    n_clusters = 5
+    n_clusters = 10
     kmeans = cluster_embeddings(embeddings, n_clusters, save=True, save_path='kmeans_model.job')
     
     print("Cluster centers:")
     print(kmeans.cluster_centers_)
     
     data_with_clusters = add_embeddings_to_dset(data, kmeans)
-    with open('data_with_clusters.jsonl', 'w') as f:
+    with open('ultrachat_with_clusters.jsonl', 'w') as f:
         for item in data_with_clusters:
             f.write(json.dumps(item) + '\n')

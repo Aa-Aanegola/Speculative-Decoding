@@ -1,4 +1,4 @@
 type: naive
-target_model: google/gemma-2-9b-it
+target_model: meta-llama/Llama-3.1-8B-Instruct
 generate_args:
   max_new_tokens: 50

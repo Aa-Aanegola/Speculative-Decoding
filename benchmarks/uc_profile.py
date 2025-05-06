@@ -21,12 +21,11 @@ os.makedirs(SCRATCH_DIR, exist_ok=True)
 # os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
 # os.makedirs(os.environ["WANDB_CACHE_DIR"], exist_ok=True)
 
-def log_to_wandb(entry_result, question_id, turn_index, category):
+def log_to_wandb(entry_result, _id, cluster):
     wandb.log({
-        "question_id": question_id,
-        "turn_index": turn_index,
-        "category": category,
-        "num_tokens": len(entry_result["tokens"]),
+        "id": _id,
+        "cluster": cluster,
+        "num_tokens": len(entry_result["output"]),
         "total_time": entry_result["total_time"],
         "tokens_per_second": entry_result["tokens_per_second"]
     })
@@ -48,14 +47,13 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str, max_new_to
     torch.cuda.synchronize()
     end = now()
 
-    decoded = tokenizer.decode(output[0], skip_special_tokens=True)
+    decoded = tokenizer.decode(output[0], skip_special_tokens=True)[len(prompt):]
     total_tokens = output.shape[-1] - inputs["input_ids"].shape[-1]
     total_time = end - start
 
     return {
         "output": decoded,
         "total_time": total_time,
-        "tokens": decoded,
         "tokens_per_second": total_tokens / total_time if total_time > 0 else 0,
     }
 
@@ -64,19 +62,18 @@ def profile_dataset(model, tokenizer, generate_args, dataset: List[Dict], max_ne
     results = []
 
     for entry in dataset:
-        qid = entry["question_id"]
-        category = entry.get("category", "unknown")
+        _id = entry["id"]
         
-        for i, turn in enumerate(entry["turns"]):
-            result = profile_single_turn(model, tokenizer, generate_args, turn, max_new_tokens=max_new_tokens)
+        prompt = entry["prompt"]
+        result = profile_single_turn(model, tokenizer, generate_args, prompt, max_new_tokens=max_new_tokens)
 
-            results.append({
-                **result,
-                **entry
-            })
+        results.append({
+            **result,
+            **entry
+        })
 
-            print(f"[{qid}] {len(result['tokens'])} tokens, {result['total_time']:.3f}s total, {result['tokens_per_second']:.2f} tok/s")
-            log_to_wandb(result, qid, i, category)
+        print(f"[{_id}] {len(result['output'])} tokens, {result['total_time']:.3f}s total, {result['tokens_per_second']:.2f} tok/s")
+        log_to_wandb(result, _id, entry['cluster'])
 
     return results
 
@@ -118,7 +115,7 @@ if __name__ == "__main__":
     })
     
     res = profile_dataset(model, tokenizer, generate_args, dset, max_new_tokens=generate_args["max_new_tokens"])
-    results_file = os.path.join(args.output_dir, f'results_{config["type"]}.json')
+    results_file = os.path.join(args.output_dir, f'results_{config["type"]}_smol.json')
     os.makedirs(os.path.dirname(results_file), exist_ok=True)
     with open(results_file, 'w') as f:
         json.dump(res, f, indent=4)
