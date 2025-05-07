@@ -12,4 +12,4 @@ interactive:
   kmeans: /insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/data/kmeans_model_uc.joblib
   sentence_model: all-MiniLM-L6-v2
   default: fsd
-  max_new_tokens: 512
+  max_new_tokens: 1024

@@ -4,3 +4,7 @@
 */wandb/*
 */tbprofiles/*
 slurm/
+*log.txt
+maincopy.py
+main2.py
+utilscopy.py
