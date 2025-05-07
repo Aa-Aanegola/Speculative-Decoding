@@ -1,10 +1,6 @@
 type: eagle2
-target_model: meta-llama/Llama-3.1-8b-Instruct
-draft_model: meta-llama/Llama-3.2-1b-Instruct
+target_model: /insomnia001/depts/edu/COMSE6998/aa5506/hf/hub/models--meta-llama--Llama-3.1-8B-Instruct/snapshots/0e9e39f249a16976918f6564b8830bc894c89659
+eagle_path: yuhuili/EAGLE3-LLaMA3.1-Instruct-8B 
 generate_args:
   max_new_tokens: 50
-  temperature: 0.7
-  top_k: 0
-  top_p: 0.9
-  num_draft_tokens: 5
-  acceptance_threshold: 0.3
+  temperature: 0.5

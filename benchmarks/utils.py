@@ -6,7 +6,10 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModel
 from fsd import FSDAutoModelForCausalLM
 import torch
 sys.path.append('../../UmbreLLa')
-sys.path.append('../../Medusa')  # Add Medusa to path
+sys.path.append('../../Medusa')
+sys.path.append('../../EAGLE')
+from eagle.model.ea_model import EaModel
+from fastchat.model import get_conversation_template
 
 import json
 logdir_base = 'logdir'
@@ -112,32 +115,17 @@ class Eagle2Wrapper:
 
 def load_model(config):
     if config["type"] == "eagle2":
-        target_model = AutoModelForCausalLM.from_pretrained(
-            config["target_model"], 
-            torch_dtype=torch.bfloat16, 
-            device_map="auto"
-        )
-        target_tokenizer = AutoTokenizer.from_pretrained(config["target_model"])
-        
-        draft_model = AutoModelForCausalLM.from_pretrained(
-            config["draft_model"], 
-            torch_dtype=torch.bfloat16, 
-            device_map="cuda"
-        )
-        draft_tokenizer = AutoTokenizer.from_pretrained(config["draft_model"])
-        
-        target_model.eval()
-        draft_model.eval()
-        
-        wrapped_model = Eagle2Wrapper(
-            target_model,
-            draft_model,
-            target_tokenizer,
-            draft_tokenizer,
-            config
+        model = EaModel.from_pretrained(
+            base_model_path=config['target_model'],
+            ea_model_path=config['eagle_path'],
+            torch_dtype=torch.float16,
+            low_cpu_mem_usage=True,
+            device_map="auto",
+            total_token=-1
         )
         
-        return wrapped_model, target_tokenizer, {}
+        
+        return model, model.tokenizer, {}
         
     elif config["type"] == "spec-decoding":
         target_model = AutoModelForCausalLM.from_pretrained(config["target_model"], torch_dtype=torch.bfloat16, device_map="auto")

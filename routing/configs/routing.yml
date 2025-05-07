@@ -1,6 +1,7 @@
 methods: 
   - /insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/benchmarks/configs/fsd.yml
   - /insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/benchmarks/configs/spec-decoding.yml
+  - /insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/benchmarks/configs/eagle2.yml
 
 speedup: ./cluster_speedup.json
 

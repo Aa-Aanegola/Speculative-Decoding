@@ -5,3 +5,5 @@ methods:
     file: ../benchmarks/out/results_fsd_smol.json
   - name: spec-decoding
     file: ../benchmarks/out/results_spec-decoding_smol.json
+  - name: eagle2
+    file: ../benchmarks/out/results_eagle2.json

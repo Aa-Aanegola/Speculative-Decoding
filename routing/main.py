@@ -24,22 +24,31 @@ def log_to_wandb(entry_result, _id, cluster, model_type):
 
 @torch.no_grad()
 def _generate(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
+    if model.__class__.__name__ == "EaModel":
+        conv = get_conversation_template("llama3")
+        conv.append_message(conv.roles[0], prompt)
+        conv.append_message(conv.roles[1], None)
+        prompt = conv.get_prompt()
+
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    new_args = {**generate_args, "max_new_tokens": max_new_tokens}
+    generate_args = {**generate_args, "max_new_tokens": max_new_tokens}
 
     torch.cuda.synchronize()
     start = now()
 
-    output = model.generate(
-        **inputs,
-        **new_args
-    )
+    if model.__class__.__name__ == "EaModel":
+        output = model.eagenerate(inputs.input_ids, **generate_args)
+    else:
+        output = model.generate(**inputs, **generate_args)
 
     torch.cuda.synchronize()
     end = now()
 
     decoded = tokenizer.decode(output[0], skip_special_tokens=True)
-    total_tokens = output.shape[-1] - inputs["input_ids"].shape[-1]
+    prompt_len = len(tokenizer.decode(inputs.input_ids[0], skip_special_tokens=True))
+    decoded = decoded[prompt_len:] 
+
+    total_tokens = output.shape[-1] - inputs.input_ids.shape[-1]
     total_time = end - start
 
     return {
@@ -47,6 +56,7 @@ def _generate(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
         "total_time": total_time,
         "tokens_per_second": total_tokens / total_time if total_time > 0 else 0,
     }
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Spec Decoding Router")

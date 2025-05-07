@@ -8,6 +8,9 @@ import wandb
 from datetime import datetime
 import os
 from time import perf_counter as now
+import sys
+sys.path.append('../EAGLE')
+from fastchat.model import get_conversation_template
 
 # # Use scratch directory for cache and output
 SCRATCH_DIR = "/insomnia001/depts/edu/COMSE6998/aa5506/scratch"
@@ -32,17 +35,29 @@ def log_to_wandb(entry_result, _id, cluster):
 
 @torch.no_grad()
 def profile_single_turn(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    if model.__class__.__name__ == "EaModel":
+        conv = get_conversation_template("llama3")
+        conv.append_message(conv.roles[0], prompt)
+        conv.append_message(conv.roles[1], None)
+        prompt = conv.get_prompt()
+    
+    inputs = tokenizer(prompt, return_tensors="pt").to('cuda')
 
     torch.cuda.synchronize()
     start = now()
 
     ## TODO: Figure out how to do token by token generation
 
-    output = model.generate(
-        **inputs,
-        **generate_args
-    )
+    if model.__class__.__name__ == "EaModel":
+        output = model.eagenerate(
+            inputs.input_ids, 
+            **generate_args
+        )
+    else:
+        output = model.generate(
+            **inputs,
+            **generate_args
+        )
 
     torch.cuda.synchronize()
     end = now()
@@ -65,8 +80,16 @@ def profile_dataset(model, tokenizer, generate_args, dataset: List[Dict], max_ne
         _id = entry["id"]
         
         prompt = entry["prompt"]
-        result = profile_single_turn(model, tokenizer, generate_args, prompt, max_new_tokens=max_new_tokens)
-
+        try:
+            result = profile_single_turn(model, tokenizer, generate_args, prompt, max_new_tokens=max_new_tokens)
+        except Exception as e:
+            print(f"[{_id}] Error: {e}")
+            result = {
+                "output": "",
+                "total_time": 0,
+                "tokens_per_second": 0,
+            }
+    
         results.append({
             **result,
             **entry
