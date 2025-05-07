@@ -1,10 +1,10 @@
 type: eagle2
-target_model: google/gemma-7b
-draft_model: google/gemma-2b-it
+target_model: meta-llama/Llama-3.1-8b-Instruct
+draft_model: meta-llama/Llama-3.2-1b-Instruct
 generate_args:
-  max_new_tokens: 32
+  max_new_tokens: 50
   temperature: 0.7
   top_k: 0
   top_p: 0.9
-  num_draft_tokens: 5  # Number of tokens to generate in each draft step
-  acceptance_threshold: 0.3  # Probability threshold for accepting draft tokens 
+  num_draft_tokens: 5
+  acceptance_threshold: 0.3

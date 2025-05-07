@@ -1,13 +1,12 @@
 import yaml
 import sys
+import os
 sys.path.append('..')
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModel
 from fsd import FSDAutoModelForCausalLM
 import torch
 sys.path.append('../../UmbreLLa')
-# from umbrella.engine.auto_engine import AutoEngine
-sys.path.append('../../')
-# from Medusa.medusa.model.medusa_model import MedusaModelLlama, MedusaConfig
+sys.path.append('../../Medusa')  # Add Medusa to path
 
 import json
 logdir_base = 'logdir'
@@ -24,6 +23,15 @@ class Eagle2Wrapper:
         self.draft_tokenizer = draft_tokenizer
         self.config = config
         self.device = model.device
+        
+        # Set up proper padding tokens
+        if not hasattr(self.tokenizer, 'pad_token') or self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+            self.draft_tokenizer.pad_token = self.draft_tokenizer.eos_token
+        
+        if not hasattr(self.model.config, 'pad_token_id') or self.model.config.pad_token_id is None:
+            self.model.config.pad_token_id = self.tokenizer.pad_token_id
+            self.draft_model.config.pad_token_id = self.draft_tokenizer.pad_token_id
 
     def parameters(self):
         """Return all parameters from both target and draft models."""
@@ -48,11 +56,13 @@ class Eagle2Wrapper:
             kwargs['do_sample'] = True
         
         current_ids = input_ids.clone()
+        current_mask = attention_mask.clone() if attention_mask is not None else torch.ones_like(input_ids)
         
         for _ in range(0, max_new_tokens, num_draft_tokens):
             # Generate draft tokens
             draft_outputs = self.draft_model.generate(
                 current_ids,
+                attention_mask=current_mask,
                 max_new_tokens=num_draft_tokens,
                 pad_token_id=self.draft_tokenizer.pad_token_id,
                 **kwargs
@@ -60,7 +70,12 @@ class Eagle2Wrapper:
             draft_tokens = draft_outputs[:, current_ids.shape[1]:]
             
             # Verify with target model
-            logits = self.model(current_ids).logits[:, -1:]
+            model_outputs = self.model(
+                current_ids,
+                attention_mask=current_mask,
+                return_dict=True
+            )
+            logits = model_outputs.logits[:, -1:]
             probs = torch.softmax(logits, dim=-1)
             
             # Accept tokens that meet threshold
@@ -75,18 +90,19 @@ class Eagle2Wrapper:
                 # If no tokens accepted, generate one token with target model
                 target_output = self.model.generate(
                     current_ids,
+                    attention_mask=current_mask,
                     max_new_tokens=1,
                     pad_token_id=self.tokenizer.pad_token_id,
                     **kwargs
                 )
                 new_token = target_output[:, -1:]
                 current_ids = torch.cat([current_ids, new_token], dim=1)
+                current_mask = torch.cat([current_mask, torch.ones_like(new_token)], dim=1)
             else:
                 # Add accepted tokens
-                current_ids = torch.cat([
-                    current_ids,
-                    torch.tensor([accepted_tokens], device=self.device)
-                ], dim=1)
+                new_tokens = torch.tensor([accepted_tokens], device=self.device)
+                current_ids = torch.cat([current_ids, new_tokens], dim=1)
+                current_mask = torch.cat([current_mask, torch.ones_like(new_tokens)], dim=1)
             
             # Check if we should stop
             if self.tokenizer.eos_token_id in current_ids[0]:
@@ -130,7 +146,6 @@ def load_model(config):
         draft_tokenizer = AutoTokenizer.from_pretrained(config["draft_model"])
         target_model.eval()
         draft_model.eval()
-        
     
         return target_model, target_tokenizer, {
             'assistant_model': draft_model,
@@ -142,7 +157,6 @@ def load_model(config):
         draft_model = FSDAutoModelForCausalLM.from_pretrained(config["draft_model"], torch_dtype=torch.bfloat16, device_map='cuda')
         target_model.eval()
         draft_model.eval()
-        
         
         return target_model, tokenizer, {
             'assistant_model': draft_model,
@@ -192,12 +206,43 @@ def load_model(config):
         
     #     return target_model, target_tokenizer, {}
     
-    elif config["type"] == "medusa-gemma":
-        target_model = AutoModel.from_pretrained(config["target_model"])
-        target_tokenizer = AutoTokenizer.from_pretrained(config["target_model"])
-        target_model.eval()
-        return target_model, target_tokenizer, {}
-    
+#     elif config["type"] == "medusa-gemma":
+#         target_model = AutoModel.from_pretrained(config["target_model"])
+#         target_tokenizer = AutoTokenizer.from_pretrained(config["target_model"])
+#         target_model.eval()
+#         return target_model, target_tokenizer, {}
+#         # Load the model directly - the MedusaModel class will handle config creation
+#         model = MedusaModel.from_pretrained(
+#             config["target_model"]["medusa"],
+#             torch_dtype=torch.float16,
+#             device_map="auto",
+#             trust_remote_code=True
+#         )
+        
+#         # Use base model tokenizer
+#         tokenizer = AutoTokenizer.from_pretrained(
+#             config["target_model"]["base"],
+#             trust_remote_code=True
+#         )
+#         model.eval()
+        
+#         # Get max tokens from config
+#         max_steps = config["generate_args"].get("max_new_tokens", config["generate_args"].get("max_length", 512))
+        
+#         # Use the predefined medusa_choices for vicuna-7b
+#         generation_kwargs = {
+#             "temperature": config["generate_args"].get("temperature", 0.7),
+#             "max_steps": max_steps,
+#             "posterior_threshold": config["generate_args"].get("posterior_threshold", 0.09),
+#             "posterior_alpha": config["generate_args"].get("posterior_alpha", 0.3),
+#             "medusa_choices": vicuna_7b_stage2,  # Use the predefined choices
+#             "top_p": config["generate_args"].get("top_p", 0.8),
+#             "sampling": config["generate_args"].get("sampling", "typical"),
+#             "fast": config["generate_args"].get("fast", True)
+#         }
+        
+#         return model, tokenizer, generation_kwargs
+#   
     else:
         raise ValueError(f"Unknown model type: {config['type']}")
     
