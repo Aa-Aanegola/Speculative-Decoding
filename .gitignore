@@ -3,3 +3,4 @@
 *.pyc
 */wandb/*
 */tbprofiles/*
+slurm/

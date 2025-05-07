@@ -9,7 +9,8 @@ from time import perf_counter as now
 import wandb
 from datetime import datetime
 import os
-
+import torch
+import json
 def log_to_wandb(entry_result, _id, cluster, model_type):
     wandb.log({
         "id": _id,
@@ -147,5 +148,5 @@ if __name__ == "__main__":
         
         results_file = 'results_routing.json'
         with open(results_file, 'w') as f:
-            json.dump(res, f, indent=4)
+            json.dump(results, f, indent=4)
         wandb.finish()
