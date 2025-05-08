@@ -5,7 +5,6 @@ from collections import defaultdict
 import pandas as pd
 from scipy.stats import hmean
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Profiler')
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
@@ -57,5 +56,5 @@ if __name__ == "__main__":
  
     
     print(cluster_speedup_dict)
-    with open('cluster_speedup.json', 'w') as f:
+    with open(config['output_path'], 'w') as f:
         json.dump(cluster_speedup_dict, f, indent=4)

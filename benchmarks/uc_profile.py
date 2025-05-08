@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../EAGLE')
+sys.path.append('../')
 import torch
 from typing import List, Dict
 import yaml
@@ -8,21 +11,8 @@ import wandb
 from datetime import datetime
 import os
 from time import perf_counter as now
-import sys
-sys.path.append('../EAGLE')
 from fastchat.model import get_conversation_template
-
-# # Use scratch directory for cache and output
-SCRATCH_DIR = "/insomnia001/depts/edu/COMSE6998/aa5506/scratch"
-# os.environ["HF_HOME"] = os.path.join(SCRATCH_DIR, ".cache/huggingface")
-# os.environ["WANDB_DIR"] = os.path.join(SCRATCH_DIR, "wandb")
-# os.environ["WANDB_CACHE_DIR"] = os.path.join(SCRATCH_DIR, ".cache/wandb")
-
-# # Create directories if they don't exist
-os.makedirs(SCRATCH_DIR, exist_ok=True)
-# os.makedirs(os.environ["HF_HOME"], exist_ok=True)
-# os.makedirs(os.environ["WANDB_DIR"], exist_ok=True)
-# os.makedirs(os.environ["WANDB_CACHE_DIR"], exist_ok=True)
+        
 
 def log_to_wandb(entry_result, _id, cluster):
     wandb.log({
@@ -45,8 +35,6 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str, max_new_to
 
     torch.cuda.synchronize()
     start = now()
-
-    ## TODO: Figure out how to do token by token generation
 
     if model.__class__.__name__ == "EaModel":
         output = model.eagenerate(
@@ -83,6 +71,7 @@ def profile_dataset(model, tokenizer, generate_args, dataset: List[Dict], max_ne
         try:
             result = profile_single_turn(model, tokenizer, generate_args, prompt, max_new_tokens=max_new_tokens)
         except Exception as e:
+            # some prompts break some of the models - explicit error handling
             print(f"[{_id}] Error: {e}")
             result = {
                 "output": "",
@@ -107,7 +96,7 @@ if __name__ == "__main__":
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
     parser.add_argument('--dataset', type=str, required=True, help='dataset to profile')
     parser.add_argument('--wandb', action='store_true', help='use wandb for logging')
-    parser.add_argument('--output-dir', type=str, default=SCRATCH_DIR, help='directory to save results')
+    parser.add_argument('--output-dir', type=str, default='../out', help='directory to save results')
     args = parser.parse_args()
     
     with open(f'{args.yaml}', 'r') as f:
@@ -130,7 +119,6 @@ if __name__ == "__main__":
     model, tokenizer, model_args = load_model(config)
     generate_args = {**model_args, **config["generate_args"]}
     
-    # Log model statistics
     wandb.log({
         "model_name": str(model),
         "num_parameters": sum(p.numel() for p in model.parameters()),

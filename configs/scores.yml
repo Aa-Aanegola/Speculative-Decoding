@@ -1,0 +1,10 @@
+methods: 
+  - name: baseline
+    file: ../out/results_naive_smol.json
+  - name: fsd
+    file: ../out/results_fsd_smol.json
+  - name: spec-decoding
+    file: ../out/results_spec-decoding_smol.json
+  - name: eagle2
+    file: ../out/results_eagle2.json
+output_path: 'cluster_speedup.json'

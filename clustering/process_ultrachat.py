@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../')
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 import numpy as np
@@ -6,23 +8,32 @@ import os
 import json
 import joblib
 from utils import *
+import yaml
+import argparse
 
 if __name__ == "__main__":
-    data = load_data('/insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/benchmarks/data/ultrachat_30000_prompts.jsonl')
+    parser = argparse.ArgumentParser(description='Ultrachat Clustering')
+    parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
+    
+    args = parser.parse_args()
+    
+    with open(args.yaml, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    data = load_jsonl(config['data_path'])
     sentences = [item['prompt'] for item in data]
     
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    embeddings = encode_sentences(model, sentences)
-    n_clusters = 10
+    model = SentenceTransformer(config['sentence_embedding_model'])
+    embeddings = encode_sentences(model, sentences, config['batch_size'])
+    n_clusters = config['n_clusters']
     kmeans = KMeans(n_clusters=n_clusters, random_state=42)
     kmeans.fit(embeddings)
-    joblib.dump(kmeans, 'kmeans_model_uc.joblib')
+    joblib.dump(kmeans, config['kmeans_model_path'])
     
-    bs = 32
     data_aug = []
-    for i in range(0, len(sentences), bs):
-        batch = sentences[i:i + bs]
-        batch_embeddings = embeddings[i:i + bs]
+    for i in range(0, len(sentences), config['batch_size']):
+        batch = sentences[i:i + config['batch_size']]
+        batch_embeddings = embeddings[i:i + config['batch_size']]
         batch_labels = kmeans.predict(batch_embeddings)
         data_aug.extend([
             {
@@ -34,29 +45,29 @@ if __name__ == "__main__":
             for prompt, label in zip(batch, batch_labels)
         ])
     
-    with open('ultrachat_30000_prompts_clustered.jsonl', 'w') as f:
+    with open(config['clustered_data_path'], 'w') as f:
         for item in data_aug:
             f.write(json.dumps(item) + '\n')
-    print("Clustering complete and data saved to ultrachat_30000_prompts_clustered.jsonl")
+    print(f"Clustering complete and data saved to {config['clustered_data_path']}")
     
-    subsampled_data = []
-    ultra_subsampled_data = []
-    mp = {i : [] for i in range(n_clusters)}
-    for item in data_aug:
-        mp[item['cluster']].append(item)
-    
-    for i in range(n_clusters):
-        sm = sum([1 / item['dist'] for item in mp[i]])
-        scores = [1 / item['dist'] / sm for item in mp[i]]
-        selected_indices = np.random.choice(len(mp[i]), size=500, p=scores)
-        selected_indices_ultra = np.random.choice(len(mp[i]), size=20, p=scores)
-        subsampled_data.extend([mp[i][j] for j in selected_indices])
-        ultra_subsampled_data.extend([mp[i][j] for j in selected_indices_ultra])
-    
-    with open('ultrachat_5000_prompts_clustered.jsonl', 'w') as f:
-        for item in subsampled_data:
-            f.write(json.dumps(item) + '\n')
-    with open('ultrachat_100_prompts_clustered.jsonl', 'w') as f:
-        for item in ultra_subsampled_data:
-            f.write(json.dumps(item) + '\n')
-    print("Subsampling complete and data saved to ultrachat_5000_prompts_clustered.jsonl")
+    if config['subsample']:
+        subsampled_data = []
+        ultra_subsampled_data = []
+        mp = {i : [] for i in range(n_clusters)}
+        for item in data_aug:
+            mp[item['cluster']].append(item)
+        
+        for i in range(n_clusters):
+            sm = sum([1 / item['dist'] for item in mp[i]])
+            scores = [1 / item['dist'] / sm for item in mp[i]]
+            selected_indices = np.random.choice(len(mp[i]), size=500, p=scores)
+            selected_indices_ultra = np.random.choice(len(mp[i]), size=20, p=scores)
+            subsampled_data.extend([mp[i][j] for j in selected_indices])
+            ultra_subsampled_data.extend([mp[i][j] for j in selected_indices_ultra])
+        
+        with open('ultrachat_5000_prompts_clustered.jsonl', 'w') as f:
+            for item in subsampled_data:
+                f.write(json.dumps(item) + '\n')
+        with open('ultrachat_100_prompts_clustered.jsonl', 'w') as f:
+            for item in ultra_subsampled_data:
+                f.write(json.dumps(item) + '\n')

@@ -1,0 +1,15 @@
+methods: 
+  - ../configs/fsd.yml
+  - ../configs/spec-decoding.yml
+  # - ../configs/eagle2.yml
+speedup: ./cluster_speedup.json
+
+benchmark:
+  dataset: ../data/ultrachat_5000_prompts_clustered.jsonl
+  max_new_tokens: 50
+
+interactive:
+  kmeans: ../clustering/kmeans_model_uc.joblib
+  sentence_model: all-MiniLM-L6-v2
+  default: fsd
+  max_new_tokens: 1024

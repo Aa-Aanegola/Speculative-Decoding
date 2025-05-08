@@ -1,0 +1,4 @@
+type: medusa-hf
+target_model: Nexesenex/Llama_3.1_8b_Medusa_v1.01
+generate_args:
+  max_new_tokens: 50

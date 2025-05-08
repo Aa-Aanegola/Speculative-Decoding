@@ -1,15 +1,17 @@
+import sys
+sys.path.append('../')
+
 from torch.profiler import profile, record_function, ProfilerActivity, tensorboard_trace_handler
 import torch
 from typing import List, Dict
 import yaml
 from utils import *
-from data import *
 import os
 from tqdm import tqdm
 import wandb
 from datetime import datetime
-import sys
 import logging
+os.environ["WANDB_MODE"] = "disabled"
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -109,6 +111,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Profiler')
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
     parser.add_argument('--wandb', action='store_true', help='use wandb for logging')
+    parser.add_argument('--dataset', type=str, required=True, help='dataset to profile')
     args = parser.parse_args()
     with open(f'{args.yaml}', 'r') as f:
         config = yaml.safe_load(f)
@@ -127,7 +130,7 @@ if __name__ == "__main__":
     
     
     target_model, tokenizer, args = load_model(config)
-    prompts = get_data()
+    prompts = [item['question'] for item in load_jsonl(args.dataset)]
     generate_args = {**args, **config["generate_args"]}
     
     # Log model statistics

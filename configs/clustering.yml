@@ -1,0 +1,7 @@
+data_path: /insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/data/ultrachat_30000_prompts.jsonl
+sentence_embedding_model: all-MiniLM-L6-v2
+n_clusters: 10
+kmeans_model_path: /insomnia001/depts/edu/COMSE6998/aa5506/Speculative-Decoding/clustering/kmeans_model_uc.joblib
+batch_size: 128
+clustered_data_path: ultrachat_30000_prompts_clustered.jsonl
+subsample: true

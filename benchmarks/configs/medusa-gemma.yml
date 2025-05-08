@@ -1,4 +1,0 @@
-type: medusa-gemma
-target_model: text-generation-inference/gemma-7b-it-medusa
-generate_args:
-  max_new_tokens: 50

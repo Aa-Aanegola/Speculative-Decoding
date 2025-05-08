@@ -1,7 +1,7 @@
 import argparse
 import yaml
 import sys
-sys.path.append('../benchmarks/')
+sys.path.append('../')
 from utils import *
 from sentence_transformers import SentenceTransformer
 import joblib
@@ -81,9 +81,12 @@ if __name__ == "__main__":
             'generate_args': {**generate_args, **model_cfg['generate_args']}
         }
     
-    speedup_data_raw = json.load(open(config['speedup'], 'r'))
-    
-    speedup = {int(k): max(v.items(), key=lambda x: x[1])[0] for k, v in speedup_data_raw.items()} 
+    speedup = json.load(open(config['speedup'], 'r'))
+    speedup = {
+        int(k): {model: val for model, val in v.items() if model in models}
+        for k, v in speedup.items()
+    }
+    speedup = {int(k): max(v.items(), key=lambda x: x[1])[0] for k, v in speedup.items()} 
     
     if args.mode == "interactive":
         sentence_model = SentenceTransformer(config['interactive']['sentence_model'])
