@@ -79,3 +79,48 @@ This script computes scores for input prompts based on predefined metrics. It in
     ```bash
     python compute_scores.py --yaml ../configs/scoring.yml
     ```
+
+---
+
+## Running the Web Application
+
+The framework includes a simple Flask web application (routing/app.py) that provides an interactive chat interface leveraging the routing logic.
+
+### To Launch the UI:
+
+1. Install dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   (Also install any model-specific ones like EAGLE/FSD.)
+
+2. Navigate to the routing/ directory and run:
+
+   ```bash
+   python app.py
+   ```
+
+   The server runs on `http://0.0.0.0:5000`.
+
+### Accessing the UI:
+
+* **If running on your local machine::**
+  Open `http://127.0.0.1:5000` or `http://localhost:5000` in your browser.
+
+* **On a Remote Cluster (via SSH Port Forwarding):**
+  Direct access to port 5000 on the remote server might be blocked by network configurations. If you're running `app.py` inside an interactive job on a compute node (e.g., after using `srun --pty`), you need to forward traffic from your local machine to that compute node. Open a terminal on your **local machine** and use the ssh -L command to create a tunnel:
+
+  ```bash
+  ssh -N -L 5000:<compute_node_hostname>:5000 <username>@<cluster_login_node>
+  ```
+
+  * Replace `<compute_node_hostname>` with the name of the interactive node (e.g., the one allocated via `srun`).
+  * Replace `<username>` and `<cluster_login_node>` with your login credentials.
+  * Once connected, open `http://localhost:5000` in your local browser.
+
+After launching the app and forwarding the port, you should see a UI like this:
+<!-- ![Chat UI Preview](routing/static/ui-preview.png) -->
+<img src="routing/static/ui-preview.png" alt="Chat UI Preview" width="600"/>
+
