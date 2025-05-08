@@ -11,7 +11,6 @@ import wandb
 from datetime import datetime
 import os
 from time import perf_counter as now
-from fastchat.model import get_conversation_template
         
 
 def log_to_wandb(entry_result, _id, cluster):
@@ -26,6 +25,7 @@ def log_to_wandb(entry_result, _id, cluster):
 @torch.no_grad()
 def profile_single_turn(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
     if model.__class__.__name__ == "EaModel":
+        from fastchat.model import get_conversation_template
         conv = get_conversation_template("llama3")
         conv.append_message(conv.roles[0], prompt)
         conv.append_message(conv.roles[1], None)

@@ -1,0 +1,10 @@
+vllm_model:
+  model: "meta-llama/Llama-3.1-8B-Instruct"
+  tensor_parallel_size: 1
+
+sampling_params:
+  temperature: 0.8
+  top_p: 0.95
+
+generate_args:
+  max_new_tokens: 64

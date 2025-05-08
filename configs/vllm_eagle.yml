@@ -1,0 +1,16 @@
+vllm_model:
+  model: "meta-llama/Meta-Llama-3.1-8B-Instruct"
+  tensor_parallel_size: 1
+  # max_model_len: 91088
+
+  speculative_config:
+    model: "yuhuili/EAGLE-LLaMA3-Instruct-8B"
+    draft_tensor_parallel_size: 1
+    num_speculative_tokens: 5
+
+sampling_params:
+  temperature: 0.8
+  top_p: 0.95
+
+generate_args:
+  max_new_tokens: 64 

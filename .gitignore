@@ -3,8 +3,8 @@
 *.pyc
 */wandb/*
 */tbprofiles/*
-slurm/
-*log.txt
-maincopy.py
-main2.py
-utilscopy.py
+wandb/
+test.py
+out/
+vllm_out/
+*.ipynb

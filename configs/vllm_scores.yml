@@ -1,0 +1,10 @@
+methods: 
+  - name: baseline
+    file: ../out/results_naive.json
+  - name: vllm-naive
+    file: ../out/vllm_naive_meta_llama_Llama_3_1_8B_Instruct_2025-05-08_14-02-46.json
+  - name: vllm-spec-decoding
+    file: ../out/vllm_spec-decoding_meta_llama_Llama_3_1_8B_Instruct_2025-05-08_10-20-40.json
+  - name: vllm-eagle
+    file: ../out/vllm_eagle_meta_llama_Meta_Llama_3_1_8B_Instruct_2025-05-08_13-56-53.json
+output_path: 'vllm_cluster_speedup.json'

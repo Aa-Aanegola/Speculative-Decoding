@@ -8,6 +8,7 @@ from scipy.stats import hmean
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch Profiler')
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
+    # parser.add_argument('--keepbaseline', action='store_true', help='Keep the baseline method (speedup 1.0) in the output JSON')
     args = parser.parse_args()
 
     with open(args.yaml, 'r') as f:
