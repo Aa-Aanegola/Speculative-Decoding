@@ -1,3 +1,6 @@
+'''
+Compute the harmonic mean speedups based on time from JSON results using a YAML config.
+'''
 import json
 import yaml
 import argparse

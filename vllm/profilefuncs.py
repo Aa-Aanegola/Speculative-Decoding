@@ -1,3 +1,6 @@
+'''
+Profiling functions for VLLM. (used initially when we didn't have cluster access). Full benchmarks are done with benchmarks/vllm_profile.py
+'''
 import torch
 import wandb
 from time import perf_counter
@@ -14,6 +17,20 @@ def vllm_profile(
     wandb_entity="speculative-decoding",
     wandb_project="profiling"
 ):
+    '''
+    Profiling function for VLLM.
+    Args:
+        llm: VLLM instance
+        prompts: list of prompts to generate from
+        sampling_params: sampling parameters
+        wandb_name: name of the wandb run
+        profile_dir: directory to save the profile results
+        num_warmup: number of warmup steps
+        wandb_entity: wandb entity
+        wandb_project: wandb project
+    Returns:
+        dict: profiling results
+    '''
     wandb.init(entity=wandb_entity, project=wandb_project, name=wandb_name)
     
     for _ in range(num_warmup):
@@ -97,6 +114,21 @@ def full_vllm_profile(
     wandb_entity="speculative-decoding",
     wandb_project="profiling",
 ):
+    '''
+    Profiling function for VLLM.
+    Args:
+        llm: VLLM instance
+        prompts: list of prompts to generate from
+        sampling_params: sampling parameters
+        wandb_name: name of the wandb run
+        profile_dir: directory to save the profile results
+        num_warmup: number of warmup steps
+        batch_size: batch size
+        wandb_entity: wandb entity
+        wandb_project: wandb project
+    Returns:
+        dict: profiling results
+    '''
     if wandb_name is None:
         wandb_name = "full_vllm_" + datetime.now().strftime("%Y%m%d_%H%M%S")
     wandb.init(entity=wandb_entity, project=wandb_project, name=wandb_name)
