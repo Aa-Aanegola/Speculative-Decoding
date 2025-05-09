@@ -56,6 +56,8 @@ def save_profile(model, tokenizer, generate_args: Dict, prompt_list: List[str], 
     os.makedirs(profile_dir, exist_ok=True)
     logger.info(f"Created profile directory: {profile_dir}")
 
+
+    # Log profiling data to wandb for visualization and analysis
     try:
         with profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
@@ -77,6 +79,13 @@ def save_profile(model, tokenizer, generate_args: Dict, prompt_list: List[str], 
         total_cuda_time_ms = sum([getattr(item, 'device_time', 0) for item in key_averages]) / 1e3
         total_cpu_time_ms = sum([getattr(item, 'cpu_time', 0) for item in key_averages]) / 1e3
         max_gpu_mem = torch.cuda.max_memory_allocated() / 1e6
+
+        # Logging key metrics to wandb:
+        # - How many tokens we generated
+        # - CPU/GPU time (total and per-token)
+        # - Memory usage stats
+        # We'll also create a table showing timing breakdowns for each op
+        # This helps us analyze model performance and catch bottlenecks
 
         wandb_run.log({
             "tokens_generated": num_tokens,
