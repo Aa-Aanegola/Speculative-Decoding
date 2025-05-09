@@ -6,6 +6,7 @@ import pandas as pd
 from scipy.stats import hmean
 
 if __name__ == "__main__":
+    # Argument parser 
     parser = argparse.ArgumentParser(description='PyTorch Profiler')
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
     # parser.add_argument('--keepbaseline', action='store_true', help='Keep the baseline method (speedup 1.0) in the output JSON')
@@ -14,11 +15,13 @@ if __name__ == "__main__":
     with open(args.yaml, 'r') as f:
         config = yaml.safe_load(f)
 
+    # Make sure a baseline model is specified
     if 'baseline' not in [item['name'] for item in config['methods']]:
         raise ValueError("Baseline method not found in config methods.")
     
     df = []
     
+    # Load all the data for the specified methods 
     for item in config['methods']:
         with open(item['file'], 'r') as f:
             data = [{**it, 'method': item['name']} for it in json.load(f)]
@@ -33,6 +36,7 @@ if __name__ == "__main__":
 
     cluster_speedup_dict = defaultdict(dict)
 
+    # Compute speedups for each cluster organized by method 
     for cluster in clusters:
         baseline_times = df[(df['method'] == baseline_name) & (df['cluster'] == cluster)].sort_values('id')
         
@@ -46,6 +50,7 @@ if __name__ == "__main__":
                 harmonic = hmean(speedups)
                 cluster_speedup_dict[cluster][method] = harmonic
 
+    # Do some post-processing to make the output more readable
     cluster_speedup_dict = {
         int(cluster): {str(method): float(score) for method, score in methods.items()}
         for cluster, methods in cluster_speedup_dict.items()
@@ -55,7 +60,7 @@ if __name__ == "__main__":
         for cluster, methods in cluster_speedup_dict.items()
     }
  
-    
+    # Print output and save
     print(cluster_speedup_dict)
     with open(config['output_path'], 'w') as f:
         json.dump(cluster_speedup_dict, f, indent=4)

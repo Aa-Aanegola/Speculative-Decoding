@@ -12,6 +12,7 @@ import yaml
 import argparse
 
 if __name__ == "__main__":
+    # Load arguments 
     parser = argparse.ArgumentParser(description='Ultrachat Clustering')
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
     
@@ -20,9 +21,11 @@ if __name__ == "__main__":
     with open(args.yaml, 'r') as f:
         config = yaml.safe_load(f)
     
+    # Load data - specific to ultrachat format
     data = load_jsonl(config['data_path'])
     sentences = [item['prompt'] for item in data]
     
+    # Load the Kmeans model and cluster, store the model too 
     model = SentenceTransformer(config['sentence_embedding_model'])
     embeddings = encode_sentences(model, sentences, config['batch_size'])
     n_clusters = config['n_clusters']
@@ -30,6 +33,7 @@ if __name__ == "__main__":
     kmeans.fit(embeddings)
     joblib.dump(kmeans, config['kmeans_model_path'])
     
+    # augment the data with the cluster labels 
     data_aug = []
     for i in range(0, len(sentences), config['batch_size']):
         batch = sentences[i:i + config['batch_size']]
@@ -45,11 +49,13 @@ if __name__ == "__main__":
             for prompt, label in zip(batch, batch_labels)
         ])
     
+    # Save the augmented data 
     with open(config['clustered_data_path'], 'w') as f:
         for item in data_aug:
             f.write(json.dumps(item) + '\n')
     print(f"Clustering complete and data saved to {config['clustered_data_path']}")
     
+    # This is if we're experimenting with smaller datasets - create two smaller versions 
     if config['subsample']:
         subsampled_data = []
         ultra_subsampled_data = []

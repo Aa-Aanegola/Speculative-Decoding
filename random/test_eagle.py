@@ -1,3 +1,6 @@
+# This file is to test if EAGLE is loaded correctly and can generate text 
+# change the base_model_path to your own model path - sometimes it needs the snapshot path
+
 import sys
 sys.path.append('../EAGLE')
 from eagle.model.ea_model import EaModel

@@ -12,6 +12,7 @@ import os
 import torch
 import json
 
+# Same helper function to write results to wandb - this should be moved to utils
 def log_to_wandb(entry_result, _id, cluster, model_type):
     wandb.log({
         "id": _id,
@@ -22,6 +23,7 @@ def log_to_wandb(entry_result, _id, cluster, model_type):
         "model_type": model_type
     })
 
+# Run profile for a single prompt
 @torch.no_grad()
 def _generate(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
     if model.__class__.__name__ == "EaModel":
@@ -36,6 +38,7 @@ def _generate(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
     torch.cuda.synchronize()
     start = now()
 
+    # Special handling for eagle, it doesn't take all inputs but only IDs
     if model.__class__.__name__ == "EaModel":
         output = model.eagenerate(inputs.input_ids, **generate_args)
     else:
@@ -44,6 +47,7 @@ def _generate(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
     torch.cuda.synchronize()
     end = now()
 
+    # Post processing and decoding
     decoded = tokenizer.decode(output[0], skip_special_tokens=True)
     prompt_len = len(tokenizer.decode(inputs.input_ids[0], skip_special_tokens=True))
     decoded = decoded[prompt_len:] 
@@ -59,6 +63,7 @@ def _generate(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
 
 
 if __name__ == "__main__":
+    # Argument parsing 
     parser = argparse.ArgumentParser(description="Spec Decoding Router")
     parser.add_argument("--yaml", type=str, default="./configs/routing.yml", help="Path to the YAML config file")
     parser.add_argument("--mode", type=str, default="interactive", choices=["interactive", "benchmark"], help="Mode to run the script in")
@@ -68,6 +73,7 @@ if __name__ == "__main__":
     with open(args.yaml, 'r') as file:
         config = yaml.safe_load(file)
     
+    # Load all the speciied techniques into GPU memory
     models = {}
     
     for cfg_path in config['methods']:
@@ -81,6 +87,7 @@ if __name__ == "__main__":
             'generate_args': {**generate_args, **model_cfg['generate_args']}
         }
     
+    # Load the speedup data to facilitate routing 
     speedup = json.load(open(config['speedup'], 'r'))
     speedup = {
         int(k): {model: val for model, val in v.items() if model in models}
@@ -88,7 +95,9 @@ if __name__ == "__main__":
     }
     speedup = {int(k): max(v.items(), key=lambda x: x[1])[0] for k, v in speedup.items()} 
     
+    
     if args.mode == "interactive":
+        # Sentence model for cluster selection 
         sentence_model = SentenceTransformer(config['interactive']['sentence_model'])
         kmeans = joblib.load(config['interactive']['kmeans'])
         
@@ -106,6 +115,7 @@ if __name__ == "__main__":
             cluster_id = int(kmeans.predict([prompt_embedding])[0])
             print(f"Cluster: {cluster_id}")
                 
+            # Use default - this should never happen 
             if cluster_id not in speedup:
                 print(f"Cluster {cluster_id} not found in speedup data, using default.")
                 cluster_id = 'default'
@@ -114,6 +124,7 @@ if __name__ == "__main__":
             model_info = models[best_model_type]
             print(f"Using model: {best_model_type}")
             
+            # Generate the response, handle errors if any 
             try:
                 final_prompt_string = model_info['tokenizer'].apply_chat_template(
                     prompt_messages,
@@ -145,10 +156,12 @@ if __name__ == "__main__":
             conversation_history.append({"role": "user", "content": prompt})
             conversation_history.append({"role": "assistant", "content": cleaned_response})
 
+            # Limit the conversation history to the last N turns
             MAX_OVERALL_HISTORY_TURNS = 20
             if len(conversation_history) > MAX_OVERALL_HISTORY_TURNS * 2:
                 conversation_history = conversation_history[-(MAX_OVERALL_HISTORY_TURNS * 2):]
     
+    # Benchmark code, very similar to what's in benchmarks/
     elif args.mode == "benchmark":  
         data = []
         with open(config['benchmark']['dataset'], 'r') as f:

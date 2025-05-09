@@ -23,6 +23,7 @@ def log_to_wandb(entry_result, question_id, turn_index, category):
 
 @torch.no_grad()
 def profile_single_turn(model, tokenizer, generate_args, prompt: str):
+    # Tokenize input 
     max_input_length = 1024
     inputs = tokenizer(
         prompt, 
@@ -34,12 +35,14 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str):
     torch.cuda.synchronize()
     start = now()
 
+    # Special handling for medusa - doesn't use the same wrapper or generate args 
     if hasattr(model, 'medusa_generate'):
         if hasattr(model, 'past_key_values'):
             model.past_key_values = None
             if hasattr(model, 'current_length_data'):
                 model.current_length_data.zero_()
 
+        # Filter medusa args 
         medusa_args = {
             k: generate_args[k]
             for k in [
@@ -50,6 +53,7 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str):
             if k in generate_args
         }
 
+        # Get output 
         output_text = ""
         for chunk in model.medusa_generate(
             input_ids=inputs["input_ids"],
@@ -64,6 +68,7 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str):
         total_time = end - start
         total_tokens = len(tokenizer.encode(output_text))
 
+        # Return output and timing information
         return {
             "output": output_text,
             "total_time": total_time,
@@ -72,6 +77,7 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str):
         }
 
     else:
+        # Conventional generation for other models 
         output = model.generate(
             **inputs,
             **generate_args
@@ -79,6 +85,7 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str):
         torch.cuda.synchronize()
         end = now()
 
+        # Decode output and save 
         decoded = tokenizer.decode(output[0], skip_special_tokens=True)
         total_tokens = output.shape[-1] - inputs["input_ids"].shape[-1]
         total_time = end - start
@@ -90,6 +97,7 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str):
             "tokens_per_second": total_tokens / total_time if total_time > 0 else 0,
         }
 
+# Do a pass over the full dataset and log to wandb if enabled
 def profile_dataset(model, tokenizer, generate_args, dataset: List[Dict]):
     results = []
     for entry in dataset:

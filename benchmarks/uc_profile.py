@@ -12,7 +12,7 @@ from datetime import datetime
 import os
 from time import perf_counter as now
         
-
+# Helper function to write results to wandb
 def log_to_wandb(entry_result, _id, cluster):
     wandb.log({
         "id": _id,
@@ -22,8 +22,10 @@ def log_to_wandb(entry_result, _id, cluster):
         "tokens_per_second": entry_result["tokens_per_second"]
     })
 
+# Run profile for a single prompt 
 @torch.no_grad()
 def profile_single_turn(model, tokenizer, generate_args, prompt: str, max_new_tokens=50):
+    # Special parsing for Eagle - it uses the conversation template
     if model.__class__.__name__ == "EaModel":
         from fastchat.model import get_conversation_template
         conv = get_conversation_template("llama3")
@@ -36,6 +38,7 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str, max_new_to
     torch.cuda.synchronize()
     start = now()
 
+    # Special handling for eagle, it doesn't take all inputs but only IDs
     if model.__class__.__name__ == "EaModel":
         output = model.eagenerate(
             inputs.input_ids, 
@@ -50,6 +53,7 @@ def profile_single_turn(model, tokenizer, generate_args, prompt: str, max_new_to
     torch.cuda.synchronize()
     end = now()
 
+    # Post processing and decoding 
     decoded = tokenizer.decode(output[0], skip_special_tokens=True)[len(prompt):]
     total_tokens = output.shape[-1] - inputs["input_ids"].shape[-1]
     total_time = end - start
@@ -91,6 +95,7 @@ def profile_dataset(model, tokenizer, generate_args, dataset: List[Dict], max_ne
 
 
 if __name__ == "__main__":
+    # Argument parsing 
     import argparse
     parser = argparse.ArgumentParser(description='PyTorch Profiler')
     parser.add_argument('--yaml', type=str, required=True, help='yaml file to load')
@@ -109,6 +114,7 @@ if __name__ == "__main__":
     else:
         os.environ["WANDB_DISABLED"] = "true"
     
+    # WandB setup
     run = wandb.init(
         entity="speculative-decoding",
         project="full-profiles",
@@ -116,6 +122,7 @@ if __name__ == "__main__":
         name=config["type"]+ '_'+datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
     )
     
+    # Model loading based on config 
     model, tokenizer, model_args = load_model(config)
     generate_args = {**model_args, **config["generate_args"]}
     
@@ -125,9 +132,12 @@ if __name__ == "__main__":
         "num_layers": len(list(model.children()))
     })
     
+    # Profile the dataset
     res = profile_dataset(model, tokenizer, generate_args, dset, max_new_tokens=generate_args["max_new_tokens"])
     results_file = os.path.join(args.output_dir, f'results_{config["type"]}.json')
     os.makedirs(os.path.dirname(results_file), exist_ok=True)
+    
+    # Save the results 
     with open(results_file, 'w') as f:
         json.dump(res, f, indent=4)
     wandb.finish()

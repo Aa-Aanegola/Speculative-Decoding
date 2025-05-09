@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 # Add Medusa to Python path
-sys.path.append("/insomnia001/home/nb3227")
+sys.path.append("MEDUSA_PATH")
 from Medusa.medusa.model.medusa_model import MedusaModelLlama
 
 def load_config(config_path):

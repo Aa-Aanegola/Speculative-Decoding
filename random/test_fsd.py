@@ -1,3 +1,7 @@
+# Testing the FSD (Fast Speculative Decoding) implementation with a small and large model
+# Some changes had to be made to the fsd_utils file for this to work correctly which is why 
+# we supply a local version.
+
 import sys
 sys.path.append('../')
 from transformers import AutoTokenizer
