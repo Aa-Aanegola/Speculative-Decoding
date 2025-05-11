@@ -1,8 +1,51 @@
-# SpecRouter
-SpecRouter is a framework designed to optimize speculative decoding models by providing tools for benchmarking, clustering, and routing. It includes scripts and utilities to evaluate model performance, group input prompts into clusters, and route prompts to the most suitable decoding model based on scoring mechanisms. The framework is organized into three main subdirectories: benchmarks/ for performance evaluation, clustering/ for analyzing and grouping input data, and routing/ for assigning prompts to models. By leveraging configurable scripts and profiling tools, SpecRouter enables efficient testing, analysis, and deployment of speculative decoding techniques.
+# HPML Project: SpecAdapt - Adaptive Semantic Prompt Routing for Speculative Decoding 
+## Team Information
+- **Team Name**: Hype
+- **Members**:
+  - Aakash Aanegola (aa5506)
+  - Nico Bykhovsky (nb3227)
+  - Aryamaan Saha (as7482)
 
-### Setup 
-run `pip install -r requirements.txt` to install necessary packages. Note that EAGLE and FSD require special installations from [EAGLE](https://github.com/SafeAILab/EAGLE) and [FSD](https://github.com/maxholsman/fsd)
+---
+## 1. Problem Statement
+Large Language Model (LLM) inference faces challenges in achieving both low latency and high throughput, especially for diverse incoming prompts. Speculative decoding techniques offer significant speedups, but their performance varies depending on the specific method and the characteristics of the input prompt. Choosing a single, static decoding strategy is sub-optimal across a heterogeneous stream of requests. Our project introduces SpecAdapt, a prompt-aware speculative decoding router. It embeds incoming prompts, clusters them using KMeans over MiniLM embeddings, and routes them to the best-performing decoding strategy for their semantic cluster. This strategy improves throughput by dynamically adapting to the nature of each prompt.
+
+## 2. Model Description
+
+-   **Embedding Model:** `all-MiniLM-L6-v2`, a lightweight Sentence Transformer model, is used to generate semantic embeddings of prompts.
+-   **Clustering Model:** `scikit-learn`'s KMeans is used for clustering prompt embeddings.
+
+**Frameworks & Libraries:** The project is implemented using Python, primarily leveraging:
+-   PyTorch for model loading and inference.
+-   Hugging Face Transformers for standard model architectures, tokenization, and generation utilities.
+-   vLLM inference engine for benchmarking performance under different backend optimizations.
+-   Specific libraries for advanced speculative decoding implementations (EAGLE, FSD, potential future integrations like Umbrella, vLLM).
+-   `sentence-transformers` for the embedding model.
+-   `scikit-learn` for clustering.
+
+## 4. Reproducibility Instructions
+
+### A. Requirements
+Install core dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+Note: Some speculative decoding methods (EAGLE, FSD) require special installations outside of `requirements.txt`. Refer to their respective GitHub repositories for instructions if you plan to use these methods.
+- EAGLE: [https://github.com/SafeAILab/EAGLE](https://github.com/SafeAILab/EAGLE)
+- FSD: [https://github.com/maxholsman/fsd](https://github.com/maxholsman/fsd)
+- FastChat (needed for EAGLE templating): `pip install fschat`
+
+### B. Wandb Dashboard
+
+Benchmark results and routing performance metrics were logged to Wandb.
+View the logs for our experiments here: [https://wandb.ai/speculative-decoding](https://wandb.ai/speculative-decoding). The projects used are `full-profiles` and `vllm-routing`.
+
+<!-- # SpecAdapt
+SpecAdapt is a framework designed to optimize speculative decoding models by providing tools for benchmarking, clustering, and routing. It includes scripts and utilities to evaluate model performance, group input prompts into clusters, and route prompts to the most suitable decoding model based on scoring mechanisms. The framework is organized into three main subdirectories: benchmarks/ for performance evaluation, clustering/ for analyzing and grouping input data, and routing/ for assigning prompts to models. By leveraging configurable scripts and profiling tools, SpecRouter enables efficient testing, analysis, and deployment of speculative decoding techniques. -->
+
+<!-- ### Setup 
+run `pip install -r requirements.txt` to install necessary packages. Note that EAGLE and FSD require special installations from [EAGLE](https://github.com/SafeAILab/EAGLE) and [FSD](https://github.com/maxholsman/fsd) -->
 
 ## Benchmarks Subdirectory
 
